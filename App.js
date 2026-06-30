@@ -1161,6 +1161,17 @@ export default function App() {
                               )}{' '}
                               çalışma
                             </Text>
+                            <TouchableOpacity
+                              style={styles.deleteHistoryButton}
+                              onPress={() =>
+                                requestDeleteHistory(project.id, historyItem.id)
+                              }
+                              activeOpacity={0.8}
+                            >
+                              <Text style={styles.deleteHistoryButtonText}>
+                                Kaydı sil
+                              </Text>
+                            </TouchableOpacity>
                           </View>
                         </View>
                       );
@@ -1330,49 +1341,6 @@ export default function App() {
 
             <View
               style={[
-                styles.sessionPlanCard,
-                isWebLayout && styles.webSessionPlanCard,
-              ]}
-            >
-              <Text style={styles.settingsTitle}>Oturum Bilgisi</Text>
-              <TextInput
-                style={styles.sessionTitleInput}
-                value={sessionTitle}
-                onChangeText={setSessionTitle}
-                placeholder="Örn. Öğle etüdü"
-                placeholderTextColor="#8D98AB"
-                editable={!isActive}
-              />
-              <View style={styles.sessionTypeOptions}>
-                {SESSION_TYPE_OPTIONS.map((typeOption) => {
-                  const isSelected = typeOption.id === sessionType;
-
-                  return (
-                    <TouchableOpacity
-                      style={[
-                        styles.sessionTypeButton,
-                        isSelected && styles.selectedSessionTypeButton,
-                      ]}
-                      key={typeOption.id}
-                      onPress={() => setSessionType(typeOption.id)}
-                      activeOpacity={0.8}
-                    >
-                      <Text
-                        style={[
-                          styles.sessionTypeButtonText,
-                          isSelected && styles.selectedSessionTypeButtonText,
-                        ]}
-                      >
-                        {typeOption.label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-
-            <View
-              style={[
                 styles.settingsCard,
                 isWebLayout && styles.webSettingsCard,
               ]}
@@ -1434,6 +1402,70 @@ export default function App() {
 
       {!isFocusMode && isDesktopLayout && renderHistoryPanel(true)}
       {!isFocusMode && isMenuOpen && !isDesktopLayout && renderHistoryPanel()}
+      {isSessionPromptOpen && (
+        <View style={styles.confirmOverlay}>
+          <View style={styles.confirmDialog}>
+            <Text style={styles.confirmTitle}>Oturum başlığı</Text>
+            <Text style={styles.confirmMessage}>
+              Bu çalışmaya bir isim koymak ister misiniz?
+            </Text>
+            <TextInput
+              style={styles.sessionTitleInput}
+              value={sessionTitle}
+              onChangeText={setSessionTitle}
+              placeholder="Örn. Öğle etüdü"
+              placeholderTextColor="#8D98AB"
+            />
+            <View style={styles.sessionTypeOptions}>
+              {SESSION_TYPE_OPTIONS.map((typeOption) => {
+                const isSelected = typeOption.id === sessionType;
+
+                return (
+                  <TouchableOpacity
+                    style={[
+                      styles.sessionTypeButton,
+                      isSelected && styles.selectedSessionTypeButton,
+                    ]}
+                    key={typeOption.id}
+                    onPress={() => setSessionType(typeOption.id)}
+                    activeOpacity={0.8}
+                  >
+                    <Text
+                      style={[
+                        styles.sessionTypeButtonText,
+                        isSelected && styles.selectedSessionTypeButtonText,
+                      ]}
+                    >
+                      {typeOption.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <View style={styles.confirmActions}>
+              <TouchableOpacity
+                style={styles.confirmCancelButton}
+                onPress={() => {
+                  setSessionTitle('');
+                  setIsSessionPromptOpen(false);
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.confirmCancelText}>Vazgeç</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.confirmDangerButton}
+                onPress={startTimer}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.confirmDangerText}>
+                  Başlat
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
       {pendingConfirmation && (
         <View style={styles.confirmOverlay}>
           <View style={styles.confirmDialog}>

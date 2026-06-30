@@ -349,17 +349,6 @@ export const styles = StyleSheet.create({
   webSettingsCard: {
     maxWidth: 720,
   },
-  sessionPlanCard: {
-    width: '100%',
-    maxWidth: 460,
-    backgroundColor: 'rgba(247, 250, 255, 0.95)',
-    borderRadius: 16,
-    padding: 18,
-    marginBottom: 16,
-  },
-  webSessionPlanCard: {
-    maxWidth: 720,
-  },
   settingsTitle: {
     color: '#101D3A',
     fontSize: 17,
@@ -923,5 +912,18 @@ export const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
     marginTop: 5,
+  },
+  deleteHistoryButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#FFE8E8',
+    borderRadius: 10,
+    marginTop: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  deleteHistoryButtonText: {
+    color: '#A33A3A',
+    fontSize: 12,
+    fontWeight: '800',
   },
 });
