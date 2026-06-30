@@ -19,6 +19,25 @@ const DEFAULT_PROJECT_ID = 'default-project';
 const BREAK_EXTENSION_SECONDS = 5 * 60;
 const STORAGE_KEY = 'pomodoro-app-state-v1';
 
+const SESSION_TYPE_OPTIONS = [
+  {
+    id: 'pomodoro',
+    label: 'Pomodoro',
+  },
+  {
+    id: 'free',
+    label: 'Serbest',
+  },
+  {
+    id: 'review',
+    label: 'Tekrar',
+  },
+  {
+    id: 'study',
+    label: 'Etüt',
+  },
+];
+
 const THEME_OPTIONS = [
   {
     id: 'deepBlue',
@@ -114,6 +133,8 @@ export default function App() {
     DEFAULT_PROJECT_ID
   );
   const [newProjectName, setNewProjectName] = useState('');
+  const [sessionTitle, setSessionTitle] = useState('');
+  const [sessionType, setSessionType] = useState(SESSION_TYPE_OPTIONS[0].id);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isFocusReminderVisible, setIsFocusReminderVisible] =
     useState(false);
@@ -184,6 +205,9 @@ export default function App() {
       const savedThemeExists = THEME_OPTIONS.some(
         (themeOption) => themeOption.id === parsedState.selectedThemeId
       );
+      const savedSessionTypeExists = SESSION_TYPE_OPTIONS.some(
+        (typeOption) => typeOption.id === parsedState.sessionType
+      );
       const savedIsWorkMode =
         typeof parsedState.isWorkMode === 'boolean'
           ? parsedState.isWorkMode
@@ -208,6 +232,12 @@ export default function App() {
       );
       setSelectedThemeId(
         savedThemeExists ? parsedState.selectedThemeId : 'deepBlue'
+      );
+      setSessionTitle(parsedState.sessionTitle || '');
+      setSessionType(
+        savedSessionTypeExists
+          ? parsedState.sessionType
+          : SESSION_TYPE_OPTIONS[0].id
       );
       setIsSoundEnabled(parsedState.isSoundEnabled !== false);
       setIsWorkMode(savedIsWorkMode);
@@ -234,6 +264,8 @@ export default function App() {
       studyProjects,
       activeProjectId,
       selectedThemeId,
+      sessionTitle,
+      sessionType,
       isSoundEnabled,
       isWorkMode,
       isFocusReminderVisible,
@@ -250,6 +282,8 @@ export default function App() {
     isStorageReady,
     secondsLeft,
     selectedThemeId,
+    sessionTitle,
+    sessionType,
     studyProjects,
     workMinutes,
   ]);
@@ -322,13 +356,19 @@ export default function App() {
 
   const createStudyHistoryItem = (durationSeconds) => {
     const completedAt = new Date();
+    const trimmedSessionTitle = sessionTitle.trim();
+    const selectedSessionType =
+      SESSION_TYPE_OPTIONS.find((typeOption) => typeOption.id === sessionType) ||
+      SESSION_TYPE_OPTIONS[0];
 
     return {
       id: `${completedAt.toISOString()}-${Math.round(durationSeconds)}`,
       minutes: Math.ceil(durationSeconds / 60),
       durationSeconds,
       completedAt: completedAt.toISOString(),
-      topic: '',
+      topic: trimmedSessionTitle,
+      sessionType,
+      sessionTypeLabel: selectedSessionType.label,
       time: completedAt.toLocaleString('tr-TR', {
         day: '2-digit',
         month: '2-digit',
@@ -356,6 +396,7 @@ export default function App() {
           : project
       )
     );
+    setSessionTitle('');
   };
 
   useEffect(() => {
@@ -399,6 +440,8 @@ export default function App() {
     isActive,
     isSoundEnabled,
     isWorkMode,
+    sessionTitle,
+    sessionType,
     workTime,
   ]);
 
@@ -728,6 +771,35 @@ export default function App() {
       parts: allHistoryItems.length,
     },
   ];
+  const weekDayLabels = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
+  const weekChartData = weekDayLabels.map((label, index) => {
+    const dayStart = new Date(startOfWeek);
+    dayStart.setDate(startOfWeek.getDate() + index);
+
+    const dayEnd = new Date(dayStart);
+    dayEnd.setDate(dayStart.getDate() + 1);
+
+    const daySeconds = allHistoryItems
+      .filter((historyItem) => {
+        const historyDate = getHistoryDate(historyItem);
+
+        return historyDate >= dayStart && historyDate < dayEnd;
+      })
+      .reduce(
+        (totalSeconds, historyItem) =>
+          totalSeconds + getHistorySeconds(historyItem),
+        0
+      );
+
+    return {
+      label,
+      seconds: daySeconds,
+    };
+  });
+  const maxWeekDaySeconds = Math.max(
+    ...weekChartData.map((dayItem) => dayItem.seconds),
+    1
+  );
 
   const theme = isWorkMode ? selectedTheme.work : selectedTheme.break;
 
@@ -879,15 +951,37 @@ export default function App() {
         </TouchableOpacity>
 
         {isStatsOpen && (
-          <View style={styles.statsGrid}>
-            {historyStats.map((statItem) => (
-              <View style={styles.statBox} key={statItem.label}>
-                <Text style={styles.statLabel}>{statItem.label}</Text>
-                <Text style={styles.statValue}>{statItem.duration}</Text>
-                <Text style={styles.statMeta}>{statItem.parts} part</Text>
-              </View>
-            ))}
-          </View>
+          <>
+            <View style={styles.statsGrid}>
+              {historyStats.map((statItem) => (
+                <View style={styles.statBox} key={statItem.label}>
+                  <Text style={styles.statLabel}>{statItem.label}</Text>
+                  <Text style={styles.statValue}>{statItem.duration}</Text>
+                  <Text style={styles.statMeta}>{statItem.parts} part</Text>
+                </View>
+              ))}
+            </View>
+            <View style={styles.weekChart}>
+              {weekChartData.map((dayItem) => (
+                <View style={styles.weekChartItem} key={dayItem.label}>
+                  <View style={styles.weekBarTrack}>
+                    <View
+                      style={[
+                        styles.weekBar,
+                        {
+                          height: `${Math.max(
+                            (dayItem.seconds / maxWeekDaySeconds) * 100,
+                            dayItem.seconds > 0 ? 12 : 4
+                          )}%`,
+                        },
+                      ]}
+                    />
+                  </View>
+                  <Text style={styles.weekChartLabel}>{dayItem.label}</Text>
+                </View>
+              ))}
+            </View>
+          </>
         )}
       </View>
 
@@ -1007,6 +1101,9 @@ export default function App() {
                             />
                             <Text style={styles.historyDate}>
                               {historyItem.time}
+                            </Text>
+                            <Text style={styles.historyType}>
+                              {historyItem.sessionTypeLabel || 'Pomodoro'}
                             </Text>
                             <Text style={styles.historyMinutes}>
                               {formatStudyDuration(
@@ -1157,6 +1254,17 @@ export default function App() {
               <Text style={styles.buttonText}>SIFIRLA</Text>
             </TouchableOpacity>
           )}
+          {isFocusMode && (
+            <TouchableOpacity
+              style={styles.button}
+              onPress={changeMode}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.buttonText}>
+                {isWorkMode ? 'MOLAYA GEÇ' : 'ÇALIŞMAYA GEÇ'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {!isFocusMode && (
@@ -1172,6 +1280,49 @@ export default function App() {
                   : 'Molayı Bitir / Çalışmaya Başla'}
               </Text>
             </TouchableOpacity>
+
+            <View
+              style={[
+                styles.sessionPlanCard,
+                isWebLayout && styles.webSessionPlanCard,
+              ]}
+            >
+              <Text style={styles.settingsTitle}>Oturum Bilgisi</Text>
+              <TextInput
+                style={styles.sessionTitleInput}
+                value={sessionTitle}
+                onChangeText={setSessionTitle}
+                placeholder="Örn. Öğle etüdü"
+                placeholderTextColor="#8D98AB"
+                editable={!isActive}
+              />
+              <View style={styles.sessionTypeOptions}>
+                {SESSION_TYPE_OPTIONS.map((typeOption) => {
+                  const isSelected = typeOption.id === sessionType;
+
+                  return (
+                    <TouchableOpacity
+                      style={[
+                        styles.sessionTypeButton,
+                        isSelected && styles.selectedSessionTypeButton,
+                      ]}
+                      key={typeOption.id}
+                      onPress={() => setSessionType(typeOption.id)}
+                      activeOpacity={0.8}
+                    >
+                      <Text
+                        style={[
+                          styles.sessionTypeButtonText,
+                          isSelected && styles.selectedSessionTypeButtonText,
+                        ]}
+                      >
+                        {typeOption.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
 
             <View
               style={[

@@ -324,6 +324,17 @@ export const styles = StyleSheet.create({
   webSettingsCard: {
     maxWidth: 720,
   },
+  sessionPlanCard: {
+    width: '100%',
+    maxWidth: 460,
+    backgroundColor: 'rgba(247, 250, 255, 0.95)',
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 16,
+  },
+  webSessionPlanCard: {
+    maxWidth: 720,
+  },
   settingsTitle: {
     color: '#101D3A',
     fontSize: 17,
@@ -384,6 +395,44 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     marginLeft: 10,
+  },
+  sessionTitleInput: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#D6DFEF',
+    borderWidth: 1,
+    borderRadius: 12,
+    color: '#101D3A',
+    fontSize: 15,
+    fontWeight: '800',
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+  },
+  sessionTypeOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 10,
+  },
+  sessionTypeButton: {
+    backgroundColor: '#E8EEF8',
+    borderColor: 'transparent',
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  selectedSessionTypeButton: {
+    backgroundColor: '#101D3A',
+    borderColor: '#101D3A',
+  },
+  sessionTypeButtonText: {
+    color: '#637089',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  selectedSessionTypeButtonText: {
+    color: '#FFFFFF',
   },
   themeSelector: {
     marginTop: 0,
@@ -645,6 +694,41 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
     marginTop: 3,
   },
+  weekChart: {
+    height: 96,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    marginTop: 10,
+    paddingHorizontal: 10,
+    paddingTop: 10,
+    paddingBottom: 8,
+  },
+  weekChartItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  weekBarTrack: {
+    width: 18,
+    height: 56,
+    borderRadius: 9,
+    backgroundColor: '#E8EEF8',
+    justifyContent: 'flex-end',
+    overflow: 'hidden',
+  },
+  weekBar: {
+    width: '100%',
+    backgroundColor: '#E6B450',
+    borderRadius: 9,
+  },
+  weekChartLabel: {
+    color: '#637089',
+    fontSize: 10,
+    fontWeight: '800',
+    marginTop: 6,
+  },
   newProjectCard: {
     backgroundColor: '#E8EEF8',
     borderRadius: 16,
@@ -802,6 +886,12 @@ export const styles = StyleSheet.create({
     color: '#637089',
     fontSize: 12,
     fontWeight: '700',
+  },
+  historyType: {
+    color: '#637089',
+    fontSize: 12,
+    fontWeight: '800',
+    marginTop: 4,
   },
   historyMinutes: {
     color: '#101D3A',
