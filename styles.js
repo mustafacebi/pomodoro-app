@@ -1,5 +1,30 @@
 import { StyleSheet } from 'react-native';
 
+export const createThemeStyles = (theme, progressPercentage) => ({
+  appShell: [styles.appShell, { backgroundColor: theme.background }],
+  containerBackground: { backgroundColor: theme.background },
+  modePill: { backgroundColor: theme.pill },
+  modePillText: { color: theme.accent },
+  progressBar: {
+    width: `${Math.min(progressPercentage, 100)}%`,
+    backgroundColor: theme.pill,
+  },
+});
+
+export const createSwatchStyle = (color) => ({
+  backgroundColor: color,
+});
+
+export const createWeekBarStyle = (
+  daySeconds,
+  maxWeekDaySeconds
+) => ({
+  height: `${Math.max(
+    (daySeconds / maxWeekDaySeconds) * 100,
+    daySeconds > 0 ? 12 : 4
+  )}%`,
+});
+
 export const styles = StyleSheet.create({
   appShell: {
     flex: 1,

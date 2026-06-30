@@ -9,7 +9,12 @@ import {
   Vibration,
   View,
 } from 'react-native';
-import { styles } from './styles';
+import {
+  createSwatchStyle,
+  createThemeStyles,
+  createWeekBarStyle,
+  styles,
+} from './styles';
 
 const DEFAULT_WORK_MINUTES = 25;
 const DEFAULT_BREAK_MINUTES = 5;
@@ -146,6 +151,7 @@ export default function App() {
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
   const [isStorageReady, setIsStorageReady] = useState(false);
   const [pendingConfirmation, setPendingConfirmation] = useState(null);
+  const [isSessionPromptOpen, setIsSessionPromptOpen] = useState(false);
   const isWebLayout = Platform.OS === 'web' && width >= 560;
   const isDesktopLayout = Platform.OS === 'web' && width >= 980;
 
@@ -463,6 +469,11 @@ export default function App() {
 
   const toggleTimer = () => {
     if (!isActive) {
+      if (isWorkMode) {
+        setIsSessionPromptOpen(true);
+        return;
+      }
+
       getAudioContext();
     } else {
       shouldPreserveTimerOnPauseRef.current = true;
@@ -470,6 +481,13 @@ export default function App() {
 
     setIsFocusReminderVisible(false);
     setIsActive((previousState) => !previousState);
+  };
+
+  const startTimer = () => {
+    getAudioContext();
+    setIsSessionPromptOpen(false);
+    setIsFocusReminderVisible(false);
+    setIsActive(true);
   };
 
   const requestConfirmation = (type) => {
@@ -483,12 +501,24 @@ export default function App() {
         : 'Tüm çalışma verilerini sıfırlamak istediğinize emin misiniz?',
       changeMode:
         'Şu an devam eden bir pomodoronuz var. Yine de bu işlemi yapmak ister misiniz?',
+      deleteHistory:
+        'Bu çalışma kaydını silmek istediğinize emin misiniz?',
     };
 
     setPendingConfirmation({
       type,
       title: isPomodoroRunning ? 'Devam eden pomodoro' : 'Emin misiniz?',
       message: messages[type],
+    });
+  };
+
+  const requestDeleteHistory = (projectId, historyId) => {
+    setPendingConfirmation({
+      type: 'deleteHistory',
+      title: 'Kaydı sil',
+      message: 'Bu çalışma kaydını silmek istediğinize emin misiniz?',
+      projectId,
+      historyId,
     });
   };
 
@@ -554,6 +584,7 @@ export default function App() {
     }
 
     const actionType = pendingConfirmation.type;
+    const { projectId, historyId } = pendingConfirmation;
 
     setPendingConfirmation(null);
 
@@ -569,6 +600,11 @@ export default function App() {
 
     if (actionType === 'changeMode') {
       performChangeMode();
+      return;
+    }
+
+    if (actionType === 'deleteHistory') {
+      deleteHistoryItem(projectId, historyId);
     }
   };
 
@@ -617,6 +653,21 @@ export default function App() {
                       topic,
                     }
                   : historyItem
+              ),
+            }
+          : project
+      )
+    );
+  };
+
+  const deleteHistoryItem = (projectId, historyId) => {
+    setStudyProjects((previousProjects) =>
+      previousProjects.map((project) =>
+        project.id === projectId
+          ? {
+              ...project,
+              history: project.history.filter(
+                (historyItem) => historyItem.id !== historyId
               ),
             }
           : project
@@ -802,6 +853,7 @@ export default function App() {
   );
 
   const theme = isWorkMode ? selectedTheme.work : selectedTheme.break;
+  const themeStyles = createThemeStyles(theme, progressPercentage);
 
   const renderDurationRow = (type, label, inputValue) => (
     <View style={styles.durationRow}>
@@ -876,19 +928,19 @@ export default function App() {
                   <View
                     style={[
                       styles.themeSwatch,
-                      { backgroundColor: themeOption.work.background },
+                      createSwatchStyle(themeOption.work.background),
                     ]}
                   />
                   <View
                     style={[
                       styles.themeSwatch,
-                      { backgroundColor: themeOption.work.accent },
+                      createSwatchStyle(themeOption.work.accent),
                     ]}
                   />
                   <View
                     style={[
                       styles.themeSwatch,
-                      { backgroundColor: themeOption.break.accent },
+                      createSwatchStyle(themeOption.break.accent),
                     ]}
                   />
                 </View>
@@ -968,12 +1020,10 @@ export default function App() {
                     <View
                       style={[
                         styles.weekBar,
-                        {
-                          height: `${Math.max(
-                            (dayItem.seconds / maxWeekDaySeconds) * 100,
-                            dayItem.seconds > 0 ? 12 : 4
-                          )}%`,
-                        },
+                        createWeekBarStyle(
+                          dayItem.seconds,
+                          maxWeekDaySeconds
+                        ),
                       ]}
                     />
                   </View>
@@ -1127,14 +1177,14 @@ export default function App() {
   );
 
   return (
-    <View style={[styles.appShell, { backgroundColor: theme.background }]}>
+    <View style={themeStyles.appShell}>
       <ScrollView
         contentContainerStyle={[
           styles.container,
           isDesktopLayout && styles.webContainer,
           isWebLayout && !isDesktopLayout && styles.webCompactContainer,
           isFocusMode && styles.focusContainer,
-          { backgroundColor: theme.background },
+          themeStyles.containerBackground,
         ]}
       >
         {!isFocusMode && (
@@ -1142,9 +1192,9 @@ export default function App() {
             <Text style={styles.appName}>POMODORO SAYACI</Text>
             <View style={styles.headerActions}>
               <View
-                style={[styles.modePill, { backgroundColor: theme.pill }]}
+                style={[styles.modePill, themeStyles.modePill]}
               >
-                <Text style={[styles.modePillText, { color: theme.accent }]}>
+                <Text style={[styles.modePillText, themeStyles.modePillText]}>
                   {theme.label}
                 </Text>
               </View>
@@ -1187,10 +1237,7 @@ export default function App() {
             <View
               style={[
                 styles.progressBar,
-                {
-                  width: `${Math.min(progressPercentage, 100)}%`,
-                  backgroundColor: theme.pill,
-                },
+                themeStyles.progressBar,
               ]}
             />
           </View>
