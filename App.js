@@ -124,6 +124,7 @@ export default function App() {
   const [isThemePickerOpen, setIsThemePickerOpen] = useState(false);
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
   const [isStorageReady, setIsStorageReady] = useState(false);
+  const [pendingConfirmation, setPendingConfirmation] = useState(null);
   const isWebLayout = Platform.OS === 'web' && width >= 560;
   const isDesktopLayout = Platform.OS === 'web' && width >= 980;
 
@@ -149,6 +150,7 @@ export default function App() {
   const selectedTheme =
     THEME_OPTIONS.find((themeOption) => themeOption.id === selectedThemeId) ||
     THEME_OPTIONS[0];
+  const isFocusMode = isActive;
 
   useEffect(() => {
     if (!canUseLocalStorage()) {
@@ -251,6 +253,23 @@ export default function App() {
     studyProjects,
     workMinutes,
   ]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined' || !isActive) {
+      return undefined;
+    }
+
+    const handleBeforeUnload = (event) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isActive]);
 
   const getAudioContext = () => {
     if (!isSoundEnabled || Platform.OS !== 'web' || typeof window === 'undefined') {
@@ -410,13 +429,37 @@ export default function App() {
     setIsActive((previousState) => !previousState);
   };
 
-  const resetTimer = () => {
+  const requestConfirmation = (type) => {
+    const isPomodoroRunning = isActive;
+    const messages = {
+      resetTimer: isPomodoroRunning
+        ? 'Şu an devam eden bir pomodoronuz var. Sayacı sıfırlamak istediğinize emin misiniz?'
+        : 'Sayacı sıfırlamak istediğinize emin misiniz?',
+      resetAll: isPomodoroRunning
+        ? 'Şu an devam eden bir pomodoronuz var. Tüm çalışma verilerini sıfırlamak istediğinize emin misiniz?'
+        : 'Tüm çalışma verilerini sıfırlamak istediğinize emin misiniz?',
+      changeMode:
+        'Şu an devam eden bir pomodoronuz var. Yine de bu işlemi yapmak ister misiniz?',
+    };
+
+    setPendingConfirmation({
+      type,
+      title: isPomodoroRunning ? 'Devam eden pomodoro' : 'Emin misiniz?',
+      message: messages[type],
+    });
+  };
+
+  const performResetTimer = () => {
     setIsActive(false);
     setIsFocusReminderVisible(false);
     setSecondsLeft(isWorkMode ? workTime : breakTime);
   };
 
-  const changeMode = () => {
+  const resetTimer = () => {
+    requestConfirmation('resetTimer');
+  };
+
+  const performChangeMode = () => {
     if (isWorkMode) {
       const studiedSeconds = workTime - secondsLeft;
 
@@ -434,7 +477,16 @@ export default function App() {
     setIsFocusReminderVisible(false);
   };
 
-  const resetAll = () => {
+  const changeMode = () => {
+    if (isActive) {
+      requestConfirmation('changeMode');
+      return;
+    }
+
+    performChangeMode();
+  };
+
+  const performResetAll = () => {
     setIsActive(false);
     setIsWorkMode(true);
     setSecondsLeft(workTime);
@@ -443,6 +495,38 @@ export default function App() {
     setNewProjectName('');
     setIsMenuOpen(false);
     setIsFocusReminderVisible(false);
+  };
+
+  const resetAll = () => {
+    requestConfirmation('resetAll');
+  };
+
+  const cancelPendingConfirmation = () => {
+    setPendingConfirmation(null);
+  };
+
+  const confirmPendingAction = () => {
+    if (!pendingConfirmation) {
+      return;
+    }
+
+    const actionType = pendingConfirmation.type;
+
+    setPendingConfirmation(null);
+
+    if (actionType === 'resetTimer') {
+      performResetTimer();
+      return;
+    }
+
+    if (actionType === 'resetAll') {
+      performResetAll();
+      return;
+    }
+
+    if (actionType === 'changeMode') {
+      performChangeMode();
+    }
   };
 
   const createStudyProject = () => {
@@ -952,32 +1036,35 @@ export default function App() {
           styles.container,
           isDesktopLayout && styles.webContainer,
           isWebLayout && !isDesktopLayout && styles.webCompactContainer,
+          isFocusMode && styles.focusContainer,
           { backgroundColor: theme.background },
         ]}
       >
-        <View style={[styles.header, isWebLayout && styles.webHeader]}>
-          <Text style={styles.appName}>POMODORO SAYACI</Text>
-          <View style={styles.headerActions}>
-            <View
-              style={[styles.modePill, { backgroundColor: theme.pill }]}
-            >
-              <Text style={[styles.modePillText, { color: theme.accent }]}>
-                {theme.label}
-              </Text>
-            </View>
-            {!isDesktopLayout && (
-              <TouchableOpacity
-                style={styles.menuButton}
-                onPress={() =>
-                  setIsMenuOpen((previousState) => !previousState)
-                }
-                activeOpacity={0.8}
+        {!isFocusMode && (
+          <View style={[styles.header, isWebLayout && styles.webHeader]}>
+            <Text style={styles.appName}>POMODORO SAYACI</Text>
+            <View style={styles.headerActions}>
+              <View
+                style={[styles.modePill, { backgroundColor: theme.pill }]}
               >
-                <Text style={styles.menuButtonText}>☰</Text>
-              </TouchableOpacity>
-            )}
+                <Text style={[styles.modePillText, { color: theme.accent }]}>
+                  {theme.label}
+                </Text>
+              </View>
+              {!isDesktopLayout && (
+                <TouchableOpacity
+                  style={styles.menuButton}
+                  onPress={() =>
+                    setIsMenuOpen((previousState) => !previousState)
+                  }
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.menuButtonText}>☰</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
-        </View>
+        )}
 
         <View
           style={[styles.timerCard, isWebLayout && styles.webMainCard]}
@@ -1061,88 +1148,122 @@ export default function App() {
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.button}
-            onPress={resetTimer}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.buttonText}>SIFIRLA</Text>
-          </TouchableOpacity>
-        </View>
-
-        <TouchableOpacity
-          style={styles.modeButton}
-          onPress={changeMode}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.modeButtonText}>
-            {isWorkMode
-              ? 'Çalışmayı Bitir / Molaya Geç'
-              : 'Molayı Bitir / Çalışmaya Başla'}
-          </Text>
-        </TouchableOpacity>
-
-        <View
-          style={[
-            styles.settingsCard,
-            isWebLayout && styles.webSettingsCard,
-          ]}
-        >
-          <Text style={styles.settingsTitle}>Süre Ayarları</Text>
-          {renderDurationRow('work', 'Çalışma', workMinutesInput)}
-          {renderDurationRow('break', 'Mola', breakMinutesInput)}
-          <View style={styles.soundRow}>
-            <View>
-              <Text style={styles.settingsLabel}>Sesli bildirim</Text>
-              <Text style={styles.soundHint}>
-                Süre bitince kısa bir uyarı sesi çalar.
-              </Text>
-            </View>
+          {!isFocusMode && (
             <TouchableOpacity
-              style={[
-                styles.soundToggle,
-                isSoundEnabled && styles.soundToggleActive,
-              ]}
-              onPress={() =>
-                setIsSoundEnabled((previousValue) => !previousValue)
-              }
+              style={styles.button}
+              onPress={resetTimer}
               activeOpacity={0.8}
             >
-              <Text
-                style={[
-                  styles.soundToggleText,
-                  isSoundEnabled && styles.soundToggleTextActive,
-                ]}
-              >
-                {isSoundEnabled ? 'Açık' : 'Kapalı'}
+              <Text style={styles.buttonText}>SIFIRLA</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {!isFocusMode && (
+          <>
+            <TouchableOpacity
+              style={styles.modeButton}
+              onPress={changeMode}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.modeButtonText}>
+                {isWorkMode
+                  ? 'Çalışmayı Bitir / Molaya Geç'
+                  : 'Molayı Bitir / Çalışmaya Başla'}
               </Text>
             </TouchableOpacity>
-          </View>
-        </View>
 
-        <View
-          style={[styles.sessionCard, isWebLayout && styles.webSessionCard]}
-        >
-          <View>
-            <Text style={styles.sessionTitle}>
-              {activeProject.name} Toplamı
-            </Text>
-            <Text style={styles.sessionSubtitle}>{historySummary}</Text>
-          </View>
-          <Text style={styles.sessionCount}>
-            {formatStudyDuration(activeProjectSeconds)}
-          </Text>
-        </View>
+            <View
+              style={[
+                styles.settingsCard,
+                isWebLayout && styles.webSettingsCard,
+              ]}
+            >
+              <Text style={styles.settingsTitle}>Süre Ayarları</Text>
+              {renderDurationRow('work', 'Çalışma', workMinutesInput)}
+              {renderDurationRow('break', 'Mola', breakMinutesInput)}
+              <View style={styles.soundRow}>
+                <View>
+                  <Text style={styles.settingsLabel}>Sesli bildirim</Text>
+                  <Text style={styles.soundHint}>
+                    Süre bitince kısa bir uyarı sesi çalar.
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={[
+                    styles.soundToggle,
+                    isSoundEnabled && styles.soundToggleActive,
+                  ]}
+                  onPress={() =>
+                    setIsSoundEnabled((previousValue) => !previousValue)
+                  }
+                  activeOpacity={0.8}
+                >
+                  <Text
+                    style={[
+                      styles.soundToggleText,
+                      isSoundEnabled && styles.soundToggleTextActive,
+                    ]}
+                  >
+                    {isSoundEnabled ? 'Açık' : 'Kapalı'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
 
-        {totalStudySeconds > 0 && (
-          <TouchableOpacity onPress={resetAll}>
-            <Text style={styles.resetAllText}>Tüm Verileri Sıfırla</Text>
-          </TouchableOpacity>
+            <View
+              style={[styles.sessionCard, isWebLayout && styles.webSessionCard]}
+            >
+              <View>
+                <Text style={styles.sessionTitle}>
+                  {activeProject.name} Toplamı
+                </Text>
+                <Text style={styles.sessionSubtitle}>{historySummary}</Text>
+              </View>
+              <Text style={styles.sessionCount}>
+                {formatStudyDuration(activeProjectSeconds)}
+              </Text>
+            </View>
+
+            {totalStudySeconds > 0 && (
+              <TouchableOpacity onPress={resetAll}>
+                <Text style={styles.resetAllText}>Tüm Verileri Sıfırla</Text>
+              </TouchableOpacity>
+            )}
+          </>
         )}
       </ScrollView>
 
-      {isDesktopLayout && renderHistoryPanel(true)}
-      {isMenuOpen && !isDesktopLayout && renderHistoryPanel()}
+      {!isFocusMode && isDesktopLayout && renderHistoryPanel(true)}
+      {!isFocusMode && isMenuOpen && !isDesktopLayout && renderHistoryPanel()}
+      {pendingConfirmation && (
+        <View style={styles.confirmOverlay}>
+          <View style={styles.confirmDialog}>
+            <Text style={styles.confirmTitle}>
+              {pendingConfirmation.title}
+            </Text>
+            <Text style={styles.confirmMessage}>
+              {pendingConfirmation.message}
+            </Text>
+            <View style={styles.confirmActions}>
+              <TouchableOpacity
+                style={styles.confirmCancelButton}
+                onPress={cancelPendingConfirmation}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.confirmCancelText}>Vazgeç</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.confirmDangerButton}
+                onPress={confirmPendingAction}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.confirmDangerText}>Evet</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
