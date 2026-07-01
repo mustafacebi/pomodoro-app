@@ -1150,15 +1150,13 @@ export default function App() {
                               placeholderTextColor="#8D98AB"
                             />
                             <Text style={styles.historyDate}>
-                              {historyItem.time}
-                            </Text>
-                            <Text style={styles.historyType}>
-                              {historyItem.sessionTypeLabel || 'Pomodoro'}
-                            </Text>
-                            <Text style={styles.historyMinutes}>
+                              {historyItem.time} ·{' '}
+                              {historyItem.sessionTypeLabel || 'Pomodoro'} ·{' '}
                               {formatStudyDuration(
                                 getHistorySeconds(historyItem)
-                              )}{' '}
+                              )}
+                            </Text>
+                            <Text style={styles.historyMinutes}>
                               çalışma
                             </Text>
                             <TouchableOpacity
